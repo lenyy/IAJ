@@ -3,7 +3,9 @@ using System.Linq;
 using Assets.Scripts.IAJ.Unity.Movement.Arbitration;
 using Assets.Scripts.IAJ.Unity.Movement.DynamicMovement;
 using UnityEngine;
+using Assets.Scripts.IAJ.Unity.Util;
 using UnityEngine.UI;
+using Assets.Scripts.IAJ.Unity.Movement;
 using Random = UnityEngine.Random;
 
 public class PriorityManager : MonoBehaviour
@@ -13,9 +15,11 @@ public class PriorityManager : MonoBehaviour
     public const float AVOID_MARGIN = 4.0f;
     public const float MAX_SPEED = 20.0f;
     public const float MAX_ACCELERATION = 40.0f;
+	public const float RADIUS = 20.0f;
+	public const float FAN_ANGLE = MathConstants.MATH_PI / 8;
+	public const float SEPARATION_FACTOR = 5.0f;
     public const float DRAG = 0.1f;
-
-	private DynamicCharacter RedCharacter { get; set; }
+	public const int NUMBER_OF_BOIDS = 2;
 
     private Text RedMovementText { get; set; }
 
@@ -24,6 +28,8 @@ public class PriorityManager : MonoBehaviour
     private PriorityMovement Priority { get; set; }
 
     private List<DynamicCharacter> Characters { get; set; }
+
+	private List<KinematicData> flock { get; set; }
 
 	// Use this for initialization
 	void Start () 
@@ -34,43 +40,27 @@ public class PriorityManager : MonoBehaviour
 			textObj.GetComponent<Text>().text = 
 				"Instructions\n\n" +
 				"B - Blended\n" +
-				"P - Priority\n"+
                 "Q - stop"; 
 		}
-
-	    this.RedMovementText = GameObject.Find("RedMovement").GetComponent<Text>();
+			
 		var redObj = GameObject.Find ("Red");
 
-	    this.RedCharacter = new DynamicCharacter(redObj)
-	    {
-	        Drag = DRAG,
-	        MaxSpeed = MAX_SPEED
-	    };
-        
+	 
 	    var obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
+		flock = new List<KinematicData> ();
+		this.Characters = this.CloneSecondaryCharacters(redObj, NUMBER_OF_BOIDS, obstacles);
 
-	    this.Characters = this.CloneSecondaryCharacters(redObj, 0, obstacles);
-	    this.Characters.Add(this.RedCharacter);
-
-        this.InitializeMainCharacter(obstacles);
-
-        //initialize all but the last character (because it was already initialized as the main character)
-	    foreach (var character in this.Characters.Take(this.Characters.Count-1))
-	    {
-	        this.InitializeSecondaryCharacter(character, obstacles);
-	    }
+		foreach (DynamicCharacter character in this.Characters) {
+			this.InitializeCharacters (character, obstacles);
+		}
 	}
 
-    private void InitializeMainCharacter(GameObject[] obstacles)
+	private void InitializeCharacters(DynamicCharacter character ,GameObject[] obstacles)
     {
-        this.Priority = new PriorityMovement
-        {
-            Character = this.RedCharacter.KinematicData
-        };
 
         this.Blended = new BlendedMovement
         {
-            Character = this.RedCharacter.KinematicData
+			Character = character.KinematicData
         };
         
 	    foreach (var obstacle in obstacles)
@@ -88,88 +78,47 @@ public class PriorityManager : MonoBehaviour
             //this.Priority.Movements.Add(avoidObstacleMovement);
 	    }
 
-        foreach (var otherCharacter in this.Characters)
-        {
-            if (otherCharacter != this.RedCharacter)
-            {
-                //TODO: add your AvoidCharacter movement here
-                //var avoidCharacter = new DynamicAvoidCharacter(otherCharacter.KinematicData)
-                //{
-                //    Character = this.RedCharacter.KinematicData,
-                //    MaxAcceleration = MAX_ACCELERATION,
-                //    AvoidMargin = AVOID_MARGIN,
-                //    MovementDebugColor = Color.cyan 
-                //};
+		var separation = new DynamicSeparation () 
+		{
+			Character = character.KinematicData,
+			flock = this.flock,
+			maxAcceleration = MAX_ACCELERATION,
+			radius = RADIUS,
+			separationFactor = SEPARATION_FACTOR
+		};
 
-                //this.Priority.Movements.Add(avoidCharacter);
-            }
-        }
+		var flockVelocityMatching = new DynamicFlockVelocityMatching () {
+			Character = character.KinematicData,
+			flock = this.flock,
+			radius = RADIUS,
+			fanAngle = FAN_ANGLE,
+			MaxAcceleration = MAX_ACCELERATION
+		};
 
-         var wander = new DynamicWander
-        {
+		var cohesion = new DynamicCohesion () {
+			Character = character.KinematicData,
+			flock = this.flock,
 			MaxAcceleration = MAX_ACCELERATION,
-            Character = this.RedCharacter.KinematicData,
-            MovementDebugColor = Color.yellow
-        };
+			radius = RADIUS,
+			fanAngle = FAN_ANGLE
+		};
 
-        this.Priority.Movements.Add(wander);
-        this.Blended.Movements.Add(new MovementWithWeight(wander,obstacles.Length+this.Characters.Count));
+		var wander = new DynamicWander
+		{
+			MaxAcceleration = MAX_ACCELERATION,
+			Character = character.KinematicData,
+			MovementDebugColor = Color.yellow
+		};
+				
+		this.Blended.Movements.Add(new MovementWithWeight(wander,1));
+        this.Blended.Movements.Add(new MovementWithWeight(separation, 1));
+		this.Blended.Movements.Add(new MovementWithWeight(flockVelocityMatching, 4));
+		this.Blended.Movements.Add(new MovementWithWeight(cohesion, 5));
 
-        this.RedCharacter.Movement = this.Blended;
+		character.Movement = this.Blended;
 
     }
-
-    private void InitializeSecondaryCharacter(DynamicCharacter character, GameObject[] obstacles)
-    {
-        var priority = new PriorityMovement
-        {
-            Character = character.KinematicData
-        };
-
-	    foreach (var obstacle in obstacles)
-	    {
-
-            //TODO: add your AvoidObstacle movement here
-            //avoidObstacleMovement = new DynamicAvoidObstacle(obstacle)
-            //{
-            //    MaxAcceleration = MAX_ACCELERATION,
-            //    AvoidMargin = AVOID_MARGIN,
-            //    MaxLookAhead = MAX_LOOK_AHEAD,
-            //    Character = character.KinematicData,
-            //    MovementDebugColor = Color.magenta
-            //};
-            
-            //priority.Movements.Add(avoidObstacleMovement);
-	    }
-
-        foreach (var otherCharacter in this.Characters)
-        {
-            if (otherCharacter != character)
-            {
-                //TODO: add your avoidCharacter movement here
-                //var avoidCharacter = new DynamicAvoidCharacter(otherCharacter.KinematicData)
-                //{
-                //    Character = character.KinematicData,
-                //    MaxAcceleration = MAX_ACCELERATION,
-                //    AvoidMargin = AVOID_MARGIN,
-                //    MovementDebugColor = Color.cyan
-                //};
-
-                //priority.Movements.Add(avoidCharacter);
-            }
-        }
-
-        var straightAhead = new DynamicStraightAhead
-        {
-            Character = character.KinematicData,
-            MaxAcceleration = MAX_ACCELERATION,
-            MovementDebugColor = Color.yellow
-        };
-
-        priority.Movements.Add(straightAhead);
-
-        character.Movement = priority;
-    }
+		
 
     private List<DynamicCharacter> CloneSecondaryCharacters(GameObject objectToClone,int numberOfCharacters, GameObject[] obstacles)
     {
@@ -186,6 +135,7 @@ public class PriorityManager : MonoBehaviour
             };
             //character.KinematicData.orientation = (float)Math.PI*i;
             characters.Add(character);
+			this.flock.Add (character.KinematicData);
         }
 
         return characters;
@@ -222,23 +172,18 @@ public class PriorityManager : MonoBehaviour
 	{
 		if (Input.GetKeyDown (KeyCode.Q)) 
 		{
-			this.RedCharacter.Movement = null;
+			
 		} 
 		else if (Input.GetKeyDown (KeyCode.B))
 		{
-		    this.RedCharacter.Movement = this.Blended;
-		}
-		else if (Input.GetKeyDown (KeyCode.P))
-		{
-		    this.RedCharacter.Movement = this.Priority;
+		    
 		}
 
 	    foreach (var character in this.Characters)
 	    {
 	        this.UpdateMovingGameObject(character);
 	    }
-
-        this.UpdateMovementText();
+			
 	}
 
     private void UpdateMovingGameObject(DynamicCharacter movingCharacter)
@@ -250,16 +195,5 @@ public class PriorityManager : MonoBehaviour
             movingCharacter.GameObject.transform.position = movingCharacter.Movement.Character.position;
         }
     }
-
-    private void UpdateMovementText()
-    {
-        if (this.RedCharacter.Movement == null)
-        {
-            this.RedMovementText.text = "Red Movement: Stationary";
-        }
-        else
-        {
-            this.RedMovementText.text = "Red Movement: " + this.RedCharacter.Movement.Name;
-        }
-    }
+		
 }
