@@ -10,6 +10,7 @@ using Random = UnityEngine.Random;
 
 public class PriorityManager : MonoBehaviour
 {
+    public const float CAMERA_Y = 72.4f;
     public const float X_WORLD_SIZE = 55;
     public const float Z_WORLD_SIZE = 32.5f;
     public const float AVOID_MARGIN = 4.0f;
@@ -48,10 +49,17 @@ public class PriorityManager : MonoBehaviour
 			
 		var redObj = GameObject.Find ("Red");
 
-	 
+	 	var initialCharacter = new DynamicCharacter(redObj)
+            	{
+                	MaxSpeed = MAX_SPEED,
+                	Drag = DRAG
+            	};
 	    var obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
 		flock = new List<KinematicData> ();
+
 		this.Characters = this.CloneSecondaryCharacters(redObj, Random.Range(MIN_NUMBER_OF_BOIDS, MAX_NUMBER_OF_BOIDS), obstacles);
+		this.Characters.Add(initialCharacter);
+
 
 		foreach (DynamicCharacter character in this.Characters) {
 			this.InitializeCharacters (character, obstacles);
