@@ -16,17 +16,17 @@ public class PriorityManager : MonoBehaviour
     public const float MAX_SPEED = 20.0f;
     public const float MAX_ACCELERATION = 40.0f;
 	public const float RADIUS = 20.0f;
+    public const float FLEE_RADIUS = 30.0f;
     public const float MAX_LOOK_AHEAD = 7.0f;
     public const float MAX_WHISKERS_LOOK_AHEAD = 4.0f;
     public const float MAX_WHISKERS_SPAN = 45.0f;
     public const float FAN_ANGLE = MathConstants.MATH_PI / 3;
 	public const float SEPARATION_FACTOR = 15.0f;
     public const float DRAG = 0.1f;
-	public const int NUMBER_OF_BOIDS = 30;
+	public const int MAX_NUMBER_OF_BOIDS = 50;
+    public const int MIN_NUMBER_OF_BOIDS = 20;
 
     private Text RedMovementText { get; set; }
-
-    private BlendedMovement Blended { get; set; }
 
     private PriorityMovement Priority { get; set; }
 
@@ -51,7 +51,7 @@ public class PriorityManager : MonoBehaviour
 	 
 	    var obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
 		flock = new List<KinematicData> ();
-		this.Characters = this.CloneSecondaryCharacters(redObj, NUMBER_OF_BOIDS, obstacles);
+		this.Characters = this.CloneSecondaryCharacters(redObj, Random.Range(MIN_NUMBER_OF_BOIDS, MAX_NUMBER_OF_BOIDS), obstacles);
 
 		foreach (DynamicCharacter character in this.Characters) {
 			this.InitializeCharacters (character, obstacles);
@@ -61,7 +61,7 @@ public class PriorityManager : MonoBehaviour
 	private void InitializeCharacters(DynamicCharacter character ,GameObject[] obstacles)
     {
 
-        this.Blended = new BlendedMovement
+        var Blended = new BlendedMovement
         {
 			Character = character.KinematicData
         };
@@ -78,7 +78,7 @@ public class PriorityManager : MonoBehaviour
                 WhiskersSpan = MAX_WHISKERS_SPAN,
                 MovementDebugColor = Color.magenta
             };
-            this.Blended.Movements.Add(new MovementWithWeight(avoidObstacleMovement, 5.0f));
+            Blended.Movements.Add(new MovementWithWeight(avoidObstacleMovement, 7));
         }
 
         var separation = new DynamicSeparation () 
@@ -113,12 +113,12 @@ public class PriorityManager : MonoBehaviour
 			MovementDebugColor = Color.yellow
 		};
 				
-		this.Blended.Movements.Add(new MovementWithWeight(straightAhead, 3));
-        this.Blended.Movements.Add(new MovementWithWeight(separation, 3));
-		this.Blended.Movements.Add(new MovementWithWeight(flockVelocityMatching, 2));
-		this.Blended.Movements.Add(new MovementWithWeight(cohesion, 3));
+		Blended.Movements.Add(new MovementWithWeight(straightAhead, 3));
+        Blended.Movements.Add(new MovementWithWeight(separation, 4));
+		Blended.Movements.Add(new MovementWithWeight(flockVelocityMatching, 3));
+		Blended.Movements.Add(new MovementWithWeight(cohesion, 3));
 
-		character.Movement = this.Blended;
+		character.Movement = Blended;
 
     }
 		
@@ -173,21 +173,67 @@ public class PriorityManager : MonoBehaviour
 
 	void Update()
 	{
-		if (Input.GetKeyDown (KeyCode.Q)) 
+        Camera camera = GameObject.FindGameObjectWithTag("MainCamera").GetComponent<Camera>();
+        Vector3 PointInWorld = new Vector3();
+        var buttonClicked = false;
+
+        if (Input.GetKeyDown (KeyCode.Mouse0)) 
 		{
-			
+            
+            var mousePos = Input.mousePosition;
+            mousePos.z = CAMERA_Y;
+            PointInWorld = camera.ScreenToWorldPoint(mousePos);
+            buttonClicked = true;
+            Debug.Log("world point: " + PointInWorld);
 		} 
-		else if (Input.GetKeyDown (KeyCode.B))
-		{
-		    
-		}
 
 	    foreach (var character in this.Characters)
 	    {
-	        this.UpdateMovingGameObject(character);
+            BlendedMovement movement = (BlendedMovement)character.Movement;
+            MovementWithWeight fleeClick = movement.Movements.Find(x => x.Movement.Name == "Flee");
+
+            if (buttonClicked)
+            {
+                var distanceToPoint = (character.KinematicData.position - PointInWorld).magnitude;
+
+                if(distanceToPoint < FLEE_RADIUS)
+                {
+                    var dynamicFlee = new DynamicFlee()
+                    {
+                        Character = character.KinematicData,
+                        Target = new KinematicData(),
+                        MaxAcceleration = MAX_ACCELERATION
+                    };
+
+                    if(fleeClick != null)
+                    {
+                        movement.Movements.Remove(fleeClick);
+                    }
+
+                    dynamicFlee.Target.position = PointInWorld;
+                    dynamicFlee.Target.position.y = character.KinematicData.position.y;
+
+                    movement.Movements.Add(new MovementWithWeight(dynamicFlee, 7));
+                }
+            } else
+            {
+                var distanceToPoint = (character.KinematicData.position - PointInWorld).magnitude;
+
+                if (distanceToPoint > FLEE_RADIUS)
+                {
+                    if (fleeClick != null)
+                    {
+                        movement.Movements.Remove(fleeClick);
+                    }
+                }
+
+            }
+
+
+            this.UpdateMovingGameObject(character);
+
 	    }
-			
-	}
+    }
 
     private void UpdateMovingGameObject(DynamicCharacter movingCharacter)
     {

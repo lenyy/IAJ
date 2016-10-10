@@ -62,6 +62,7 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 			massCenter /= closeBoids;
 			this.MovingTarget.position = massCenter;
             this.Target = this.MovingTarget;
+            Debug.DrawLine(this.Character.position, massCenter, Color.yellow);
 
 			return base.GetMovement();
 		}

@@ -49,7 +49,9 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 				output.linear *= maxAcceleration;
 			}
 
-			return output;
+            Debug.DrawRay(this.Character.position, output.linear, Color.red);
+
+            return output;
 		}
 
 

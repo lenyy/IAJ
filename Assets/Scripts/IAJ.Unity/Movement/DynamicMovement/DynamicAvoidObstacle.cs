@@ -32,28 +32,55 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
             rightWhisker = Quaternion.Euler(0, WhiskersSpan / 2, 0) * rightWhisker;
             Debug.DrawRay(this.Character.position, rightWhisker * WhiskersLength, MovementDebugColor);
 
-            RaycastHit hit;
-            Ray ray = new Ray(this.Character.position, centralRay.normalized);
-            var collision = CollisionDetector.Raycast(ray, out hit, MaxLookAhead);
+            Ray RayCenter;
+            bool CollisionCenter;
+            RaycastHit HitCenter;
 
-            if (!collision)
+            Ray RayLeft;
+            bool CollisionLeft;
+            RaycastHit HitLeft;
+
+            Ray RayRight;
+            bool CollisionRight;
+            RaycastHit HitRight;
+
+            if (centralRay.magnitude != 0)
             {
-                ray = new Ray(this.Character.position, leftWhisker.normalized);
-                collision = CollisionDetector.Raycast(ray, out hit, WhiskersLength);
-                if (!collision)
+                RayCenter = new Ray(this.Character.position, centralRay.normalized);
+                CollisionCenter = CollisionDetector.Raycast(RayCenter, out HitCenter, MaxLookAhead);
+
+                if (CollisionCenter)
                 {
-                    ray = new Ray(this.Character.position, rightWhisker.normalized);
-                    collision = CollisionDetector.Raycast(ray, out hit, WhiskersLength);
-                    if (!collision)
-                    {
-                        return new MovementOutput();
-                    }
+                    this.Target = new KinematicData();
+                    this.Target.position = HitCenter.point + HitCenter.normal * AvoidMargin;
+                    return base.GetMovement();
                 }
             }
+            if (leftWhisker.magnitude != 0)
+            {
+                RayLeft = new Ray(this.Character.position, leftWhisker.normalized);
+                CollisionLeft = CollisionDetector.Raycast(RayLeft, out HitLeft, WhiskersLength);
 
-            this.Target = new KinematicData();
-            this.Target.position = hit.point + hit.normal * AvoidMargin;
-            return base.GetMovement();
+                if (CollisionLeft)
+                {
+                    this.Target = new KinematicData();
+                    this.Target.position = HitLeft.point + HitLeft.normal * AvoidMargin;
+                    return base.GetMovement();
+                }
+            }
+            if (rightWhisker.magnitude != 0)
+            {
+                RayRight = new Ray(this.Character.position, rightWhisker.normalized);
+                CollisionRight = CollisionDetector.Raycast(RayRight, out HitRight, WhiskersLength);
+
+                if (CollisionRight)
+                {
+                    this.Target = new KinematicData();
+                    this.Target.position = HitRight.point + HitRight.normal * AvoidMargin;
+                    return base.GetMovement();
+                }
+            }
+            return new MovementOutput();
         }
     }
 }
