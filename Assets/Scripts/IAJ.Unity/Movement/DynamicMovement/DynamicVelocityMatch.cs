@@ -15,7 +15,7 @@
 
         public DynamicVelocityMatch()
         {
-            this.TimeToTargetSpeed = 0.5f;
+            this.TimeToTargetSpeed = 0.1f;
         }
         public override MovementOutput GetMovement()
         {

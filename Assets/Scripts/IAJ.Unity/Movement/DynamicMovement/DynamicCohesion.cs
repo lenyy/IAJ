@@ -9,7 +9,8 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 	{
 		public DynamicCohesion ()
 		{
-		}
+            this.MovingTarget = new KinematicData();
+        }
 
 		public override string Name
 		{
@@ -42,7 +43,8 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 			foreach (KinematicData boid in flock) {
 				if (this.Character != boid) {
 					var direction = boid.position - this.Character.position;
-					if (direction.magnitude <= radius) {
+
+                    if (direction.magnitude <= radius) {
 						var angle = MathHelper.ConvertVectorToOrientation (direction);
 						var angleDifference = shortestAngleDifference (this.Character.orientation, angle);
 
@@ -56,10 +58,12 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 
 			if (closeBoids == 0)
 				return new MovementOutput ();
-			massCenter /= closeBoids;
-			this.Target.position = massCenter;
 
-			return base.GetMovement ();
+			massCenter /= closeBoids;
+			this.MovingTarget.position = massCenter;
+            this.Target = this.MovingTarget;
+
+			return base.GetMovement();
 		}
 	}
 }

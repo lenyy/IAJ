@@ -16,10 +16,13 @@ public class PriorityManager : MonoBehaviour
     public const float MAX_SPEED = 20.0f;
     public const float MAX_ACCELERATION = 40.0f;
 	public const float RADIUS = 20.0f;
-	public const float FAN_ANGLE = MathConstants.MATH_PI / 8;
-	public const float SEPARATION_FACTOR = 5.0f;
+    public const float MAX_LOOK_AHEAD = 7.0f;
+    public const float MAX_WHISKERS_LOOK_AHEAD = 4.0f;
+    public const float MAX_WHISKERS_SPAN = 45.0f;
+    public const float FAN_ANGLE = MathConstants.MATH_PI / 3;
+	public const float SEPARATION_FACTOR = 15.0f;
     public const float DRAG = 0.1f;
-	public const int NUMBER_OF_BOIDS = 2;
+	public const int NUMBER_OF_BOIDS = 30;
 
     private Text RedMovementText { get; set; }
 
@@ -65,20 +68,20 @@ public class PriorityManager : MonoBehaviour
         
 	    foreach (var obstacle in obstacles)
 	    {
-            //TODO: add your AvoidObstacle movement here
-            //avoidObstacleMovement = new DynamicAvoidObstacle(obstacle)
-            //{
-            //    MaxAcceleration = MAX_ACCELERATION,
-            //    AvoidMargin = AVOID_MARGIN,
-            //    MaxLookAhead = MAX_LOOK_AHEAD,
-            //    Character = this.RedCharacter.KinematicData,
-            //    MovementDebugColor = Color.magenta
-            //};
-            //this.Blended.Movements.Add(new MovementWithWeight(avoidObstacleMovement,5.0f));
-            //this.Priority.Movements.Add(avoidObstacleMovement);
-	    }
+            var avoidObstacleMovement = new DynamicAvoidObstacle(obstacle)
+            {
+                MaxAcceleration = MAX_ACCELERATION,
+                AvoidMargin = AVOID_MARGIN,
+                MaxLookAhead = MAX_LOOK_AHEAD,
+                Character = character.KinematicData,
+                WhiskersLength = MAX_WHISKERS_LOOK_AHEAD,
+                WhiskersSpan = MAX_WHISKERS_SPAN,
+                MovementDebugColor = Color.magenta
+            };
+            this.Blended.Movements.Add(new MovementWithWeight(avoidObstacleMovement, 5.0f));
+        }
 
-		var separation = new DynamicSeparation () 
+        var separation = new DynamicSeparation () 
 		{
 			Character = character.KinematicData,
 			flock = this.flock,
@@ -93,27 +96,27 @@ public class PriorityManager : MonoBehaviour
 			radius = RADIUS,
 			fanAngle = FAN_ANGLE,
 			MaxAcceleration = MAX_ACCELERATION
+        };
+
+        var cohesion = new DynamicCohesion() {
+            Character = character.KinematicData,
+            flock = this.flock,
+            MaxAcceleration = MAX_ACCELERATION,
+            radius = RADIUS,
+            fanAngle = FAN_ANGLE
 		};
 
-		var cohesion = new DynamicCohesion () {
-			Character = character.KinematicData,
-			flock = this.flock,
-			MaxAcceleration = MAX_ACCELERATION,
-			radius = RADIUS,
-			fanAngle = FAN_ANGLE
-		};
-
-		var wander = new DynamicWander
+		var straightAhead = new DynamicStraightAhead
 		{
 			MaxAcceleration = MAX_ACCELERATION,
 			Character = character.KinematicData,
 			MovementDebugColor = Color.yellow
 		};
 				
-		this.Blended.Movements.Add(new MovementWithWeight(wander,1));
-        this.Blended.Movements.Add(new MovementWithWeight(separation, 1));
-		this.Blended.Movements.Add(new MovementWithWeight(flockVelocityMatching, 4));
-		this.Blended.Movements.Add(new MovementWithWeight(cohesion, 5));
+		this.Blended.Movements.Add(new MovementWithWeight(straightAhead, 3));
+        this.Blended.Movements.Add(new MovementWithWeight(separation, 3));
+		this.Blended.Movements.Add(new MovementWithWeight(flockVelocityMatching, 2));
+		this.Blended.Movements.Add(new MovementWithWeight(cohesion, 3));
 
 		character.Movement = this.Blended;
 
@@ -135,7 +138,7 @@ public class PriorityManager : MonoBehaviour
             };
             //character.KinematicData.orientation = (float)Math.PI*i;
             characters.Add(character);
-			this.flock.Add (character.KinematicData);
+			this.flock.Add(character.KinematicData);
         }
 
         return characters;

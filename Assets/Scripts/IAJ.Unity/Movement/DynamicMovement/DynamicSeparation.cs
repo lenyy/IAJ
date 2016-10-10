@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 using Assets.Scripts.IAJ.Unity.Util;
 
 namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
@@ -35,17 +36,16 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 				if (boid != this.Character) 
 				{
 					var direction = this.Character.position - boid.position;
-					var distance = MathHelper.ConvertVectorToOrientation (direction);
 					if (direction.magnitude < radius) {
-						var separationStrength = Math.Min (separationFactor / distance * distance, maxAcceleration);
-						direction.Normalize ();
+						var separationStrength = Math.Min (separationFactor /(direction.magnitude * direction.magnitude), maxAcceleration);
+						direction.Normalize();
 						output.linear += direction * separationStrength;
 					}
 				}
 			}
 
-			if (MathHelper.ConvertVectorToOrientation(output.linear) > maxAcceleration) {
-				output.linear.Normalize ();
+			if (output.linear.magnitude > maxAcceleration) {
+				output.linear.Normalize();
 				output.linear *= maxAcceleration;
 			}
 

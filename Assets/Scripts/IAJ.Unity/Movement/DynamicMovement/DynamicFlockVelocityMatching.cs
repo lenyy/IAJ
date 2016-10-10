@@ -9,7 +9,8 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 	{
 		public DynamicFlockVelocityMatching ()
 		{
-		}
+            this.MovingTarget = new KinematicData();
+        }
 
 		public override string Name
 		{
@@ -41,9 +42,11 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 			var closeBoids = 0;
 
 			foreach (KinematicData boid in flock) {
-				if (this.Character != boid) {
+
+                if (this.Character != boid) {
 					var direction = boid.position - this.Character.position;
-					if (direction.magnitude <= radius) {
+
+                    if (direction.magnitude <= radius) {
 						var angle = MathHelper.ConvertVectorToOrientation (direction);
 						var angleDifference = shortestAngleDifference (this.Character.orientation, angle);
 
@@ -59,7 +62,8 @@ namespace Assets.Scripts.IAJ.Unity.Movement.DynamicMovement
 				return new MovementOutput ();
 
 			averageVelocity /= closeBoids;
-			this.Target.velocity = averageVelocity;
+			this.MovingTarget.velocity = averageVelocity;
+            this.Target = this.MovingTarget;
 
 			return base.GetMovement ();
 		}
