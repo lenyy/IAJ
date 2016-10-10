@@ -48,10 +48,15 @@ public class PriorityManager : MonoBehaviour
 			
 		var redObj = GameObject.Find ("Red");
 
-	 
+	 	var initialCharacter = new DynamicCharacter(redObj)
+            	{
+                	MaxSpeed = MAX_SPEED,
+                	Drag = DRAG
+            	};
 	    var obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
 		flock = new List<KinematicData> ();
 		this.Characters = this.CloneSecondaryCharacters(redObj, NUMBER_OF_BOIDS, obstacles);
+		this.Characters.add(initialCharacter);
 
 		foreach (DynamicCharacter character in this.Characters) {
 			this.InitializeCharacters (character, obstacles);
